@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+static void populate_albums_by_artist(Player_State *ps, const char *artist);
+
 /* settings popup forward declarations */
 static void _right_click_cb(void *data, Evas *e, Evas_Object *obj, void *event_info);
 static void _settings_open_cb(void *data, Evas_Object *obj, void *event_info);
@@ -28,6 +30,7 @@ static Elm_Genlist_Item_Class itc_artist;
 static Elm_Genlist_Item_Class itc_album;
 static Elm_Genlist_Item_Class itc_album_header;
 static Elm_Genlist_Item_Class itc_track;
+
 
 static char *
 _gl_text_get(void *data, Evas_Object *obj, const char *part)
@@ -113,6 +116,43 @@ populate_tracks(Player_State *ps)
       }
    }
 }
+/* NEW: populate albums filtered by artist */
+static void
+populate_albums_by_artist(Player_State *ps, const char *artist)
+{
+   elm_genlist_clear(ps->genlist);
+
+   char *album_name;
+   Eina_List *l;
+
+  /* iterate all albums */
+   EINA_LIST_FOREACH(ps->lib->albums, l, album_name) {
+      /* get tracks for this album */
+      Eina_List *tracks = eina_hash_find(ps->lib->album_tracks, album_name);
+      if (!tracks) continue;
+
+      /* check if any track matches the artist */
+      Track *t;
+      Eina_List *lt;
+      Eina_Bool match = EINA_FALSE;
+
+      EINA_LIST_FOREACH(tracks, lt, t) {
+         if (t->artist && strcmp(t->artist, artist) == 0) {
+            match = EINA_TRUE;
+            break;
+         }
+      }
+
+      if (match) {
+         Item_Data *id = calloc(1, sizeof(Item_Data));
+         id->type = ITEM_ALBUM;
+         id->u.name = album_name;
+         elm_genlist_item_append(ps->genlist, &itc_album, id, NULL,
+                                 ELM_GENLIST_ITEM_NONE, NULL, ps);
+      }
+   }
+}
+
 
 void
 ui_refresh_current(Player_State *ps)
@@ -132,7 +172,15 @@ genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
    Player_State *ps = data;
    Elm_Object_Item *it = event_info;
    Item_Data *id = elm_object_item_data_get(it);
-   if (!id) return;
+   if (!id) return;   
+
+   /* NEW: clicking an artist filters albums */
+   if (id->type == ITEM_ARTIST) {
+      ps->filter = FILTER_ALBUMS;
+      populate_albums_by_artist(ps, id->u.name);
+      return;
+   }
+
 
    switch (id->type) {
    case ITEM_ALBUM:

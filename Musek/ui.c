@@ -279,6 +279,9 @@ btn_next_cb(void *data, Evas_Object *obj, void *event_info)
     Track *t = eina_list_nth(ps->current_album_tracks, ps->current_index);
     if (t)
         playback_track_start(ps, t);
+      
+   populate_current_album_tracklist(ps);
+
 }
 
 static void
@@ -297,6 +300,8 @@ btn_prev_cb(void *data, Evas_Object *obj, void *event_info)
     Track *t = eina_list_nth(ps->current_album_tracks, ps->current_index);
     if (t)
         playback_track_start(ps, t);
+
+   populate_current_album_tracklist(ps);        
 }
 
 

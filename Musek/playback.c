@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void populate_current_album_tracklist(Player_State *ps);
+
 static Eina_Bool
 progress_update_cb(void *data)
 {
@@ -30,7 +32,8 @@ playback_finished_cb(void *data, Evas_Object *obj, void *event_info)
       ps->current_index = 0;
       return;
    }
-
+   
+   populate_current_album_tracklist(ps);
    playback_track_start(ps, next);
 }
 

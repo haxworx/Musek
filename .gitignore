@@ -1,1 +1,29 @@
+
+# Build directory (Meson/Ninja)
+build/
+
+# Meson logs and artifacts
+meson-logs/
+meson-private/
+
+# Backup files
+*~
+*.swp
+*.bak
+
+# Compiled objects (if any appear)
+*.o
+*.a
+*.so
+*.so.*
+
+# Executables
+musek
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
+
+# Editor-specific junk
 .vscode/
+.idea/

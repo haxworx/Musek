@@ -67,11 +67,11 @@ ui_setup(Player_State *ps)
     evas_object_event_callback_add(win, EVAS_CALLBACK_MOUSE_DOWN, _right_click_cb, ps);
 
     /* ---------------------------------------------------------
-       MAIN PANES (directly added to window)
+       MAIN PANES
        --------------------------------------------------------- */
     Evas_Object *panes = elm_panes_add(win);
     elm_panes_horizontal_set(panes, EINA_FALSE);
-    elm_panes_content_left_size_set(panes, 0.40);
+    elm_panes_content_left_size_set(panes, 0.50);
     evas_object_size_hint_weight_set(panes, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
     evas_object_size_hint_align_set(panes, EVAS_HINT_FILL, EVAS_HINT_FILL);
     evas_object_show(panes);
@@ -128,12 +128,13 @@ ui_setup(Player_State *ps)
 
     Evas_Object *title = elm_label_add(right);
     elm_object_text_set(title, "<b>Artist Name - Track Title</b>");
-    evas_object_size_hint_align_set(title, 0.5, 0.0);
+    evas_object_size_hint_align_set(title, 0.45, 0.0);
     evas_object_size_hint_padding_set(title, 0, 0, 10, 0);
     evas_object_show(title);
     elm_box_pack_end(right, title);
     ps->title_label = title;
 
+    /* Album art widget */
     Evas_Object *album_art = elm_image_add(right);
     elm_image_aspect_fixed_set(album_art, EINA_TRUE);
     elm_image_resizable_set(album_art, EINA_TRUE, EINA_TRUE);
@@ -145,6 +146,10 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, album_art);
     ps->album_art = album_art;
 
+    /* Default album art */
+    elm_image_file_set(album_art, "/data/noart.png", NULL);
+
+    /* Emotion player */
     Evas_Object *emotion = emotion_object_add(evas_object_evas_get(win));
     emotion_object_init(emotion, NULL);
     evas_object_size_hint_weight_set(emotion, 0.0, 0.0);
@@ -153,6 +158,7 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, emotion);
     ps->emotion = emotion;
 
+    /* Playback controls */
     Evas_Object *controls = elm_box_add(right);
     elm_box_horizontal_set(controls, EINA_TRUE);
     evas_object_size_hint_weight_set(controls, EVAS_HINT_EXPAND, 0.0);
@@ -190,6 +196,7 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, slider);
     ps->slider = slider;
 
+    /* Tracklist (right pane) */
     Evas_Object *tracklist = elm_genlist_add(right);
     evas_object_size_hint_weight_set(tracklist, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
     evas_object_size_hint_align_set(tracklist, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -197,6 +204,7 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, tracklist);
     ps->album_tracklist = tracklist;
 
+    /* Volume */
     Evas_Object *vol_box = elm_box_add(right);
     elm_box_horizontal_set(vol_box, EINA_TRUE);
     evas_object_size_hint_weight_set(vol_box, EVAS_HINT_EXPAND, 0.0);
@@ -216,6 +224,7 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(vol_box, vol);
     ps->volume_slider = vol;
 
+    /* Callbacks */
     evas_object_smart_callback_add(btn_play, "clicked", play_cb, ps);
     evas_object_smart_callback_add(btn_pause, "clicked", pause_cb, ps);
     evas_object_smart_callback_add(btn_prev, "clicked", btn_prev_cb, ps);
@@ -223,8 +232,10 @@ ui_setup(Player_State *ps)
     evas_object_smart_callback_add(slider, "changed", slider_changed_cb, ps);
     evas_object_smart_callback_add(vol, "changed", volume_changed_cb, ps);
 
+    /* Init playback */
     playback_init(ps);
 
+    /* Default view */
     ps->filter = FILTER_ALBUMS;
     ui_refresh_current(ps);
 }

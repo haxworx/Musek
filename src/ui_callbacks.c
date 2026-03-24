@@ -1,5 +1,9 @@
 #include "ui_internal.h"
+#include <strings.h>   /* for strcasecmp */
 
+/* ------------------------------------
+   Main Genlist Selection Callback
+   ------------------------------------ */
 void
 genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
 {
@@ -8,6 +12,9 @@ genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
     Item_Data *id = elm_object_item_data_get(it);
     if (!id) return;
 
+    /* ------------------------------
+       ARTIST SELECTED
+       ------------------------------ */
     if (id->type == ITEM_ARTIST) {
         ps->filter = FILTER_ALBUMS;
         populate_albums_by_artist(ps, id->u.name);
@@ -21,14 +28,15 @@ genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
        ------------------------------ */
     case ITEM_ALBUM:
     {
-        const char *album = id->u.name;
+        Album_Entry *a = id->u.album;
+        if (!a) break;
 
         ps->album_mode = EINA_TRUE;
-        ps->current_album = album;
+        ps->current_album = a->album;
 
         /* Load tracks for this album */
         ps->current_album_tracks =
-            eina_hash_find(ps->lib->album_tracks, album);
+            eina_hash_find(ps->lib->album_tracks, a->album);
 
         if (!ps->current_album_tracks) {
             elm_genlist_clear(ps->album_tracklist);
@@ -58,11 +66,6 @@ genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
         /* Clear right pane */
         elm_genlist_clear(ps->album_tracklist);
 
-        /* IMPORTANT:
-         * Do NOT free ps->current_album_tracks.
-         * It may point to a list owned by lib->album_tracks.
-         */
-
         /* Create a new one-element list */
         ps->current_album_tracks = eina_list_append(NULL, id->u.track);
         ps->current_index = 0;
@@ -90,6 +93,9 @@ genlist_selected_cb(void *data, Evas_Object *obj, void *event_info)
     }
 }
 
+/* ------------------------------------
+   Filter Buttons
+   ------------------------------------ */
 void btn_artists_cb(void *data, Evas_Object *obj, void *event_info)
 {
     Player_State *ps = data;
@@ -111,6 +117,9 @@ void btn_tracks_cb(void *data, Evas_Object *obj, void *event_info)
     ui_refresh_current(ps);
 }
 
+/* ------------------------------------
+   Playback Controls
+   ------------------------------------ */
 void play_cb(void *data, Evas_Object *obj, void *event_info)
 {
     playback_play(data);
@@ -170,13 +179,16 @@ void btn_prev_cb(void *data, Evas_Object *obj, void *event_info)
     populate_current_album_tracklist(ps);
 }
 
-void
-volume_changed_cb(void *data, Evas_Object *obj, void *event_info)
+void volume_changed_cb(void *data, Evas_Object *obj, void *event_info)
 {
     Player_State *ps = data;
     double vol = elm_slider_value_get(obj);
     playback_set_volume(ps, vol);
 }
+
+/* ------------------------------------
+   Track Selected in Right Pane
+   ------------------------------------ */
 void
 album_track_selected_cb(void *data, Evas_Object *obj, void *event_info)
 {
@@ -208,4 +220,3 @@ album_track_selected_cb(void *data, Evas_Object *obj, void *event_info)
     /* Refresh right pane */
     populate_current_album_tracklist(ps);
 }
-

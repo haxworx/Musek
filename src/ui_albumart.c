@@ -1,60 +1,46 @@
 #include "player.h"
 #include <Ecore_File.h>
-#include <libgen.h>   // dirname()
 #include <string.h>
 #include <stdlib.h>
 
-static const char *album_art_candidates[] = {
-    "album.jpg",
-    "Album.jpg",
-    "album.png",
-    "Album.png",
-    "folder.jpg",
-    "folder.png",
-    "Folder.jpg",
-    "Folder.png",
-    "Cover.jpg",
-    "cover.png",
-    "NULL"
-};
+
 
 void
 ui_update_album_art(Player_State *ps, Track *t)
 {
-    if (!ps || !t || !t->path) return;
+    if (!ps || !t || !t->dir) return;
 
-    // 1. Get directory of the track
-    char *path_copy = strdup(t->path);
-    char *dir = dirname(path_copy);   // modifies path_copy
-
-    printf("Track path: %s\n", t->path);
-    printf("Album directory: %s\n", dir);
-
-    // 2. Try each candidate file
-    char fullpath[PATH_MAX];
-    const char **p = album_art_candidates;
+    const char *dir = t->dir;
+    char full[PATH_MAX];
     const char *found = NULL;
 
-    while (*p) {
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, *p);
-            printf("Checking: %s\n", fullpath);
-        if (ecore_file_exists(fullpath)) {
-                    printf("FOUND: %s\n", fullpath);
-            found = strdup(fullpath);
+    const char *candidates[] = {
+        "cover.jpg", "cover.png",
+        "Cover.jpg", "Cover.png",
+        "folder.jpg", "folder.png",
+        "Folder.jpg", "Folder.png",
+        "album.jpg",  "album.png",
+        "Album.jpg",  "Album.png",
+        NULL
+    };
+
+    for (const char **p = candidates; *p; p++) {
+        snprintf(full, sizeof(full), "%s/%s", dir, *p);
+        if (ecore_file_exists(full)) {
+            found = strdup(full);
             break;
         }
-        p++;
     }
 
-    free(path_copy);
-
-    // 3. If nothing found, use fallback from source tree
-    if (!found) {
+    if (!found)
         found = strdup("data/noart.png");
-    }
 
-    // 4. Update the UI image widget
+    /* FIX: clear previous image first */
+    elm_image_file_set(ps->album_art, NULL, NULL);
+
+    /* Now set the new one */
     elm_image_file_set(ps->album_art, found, NULL);
 
     free((char*)found);
 }
+

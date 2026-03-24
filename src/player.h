@@ -6,7 +6,9 @@
 #include <Eio.h>
 #include <Eina.h>
 #include <Ecore.h>
+#include <linux/limits.h>
 #include <taglib/tag_c.h>
+#include <limits.h>
 
 /* ------------------------------
    Track Structure
@@ -16,6 +18,7 @@ typedef struct _Track {
    char *artist;
    char *album;
    char *path;
+   char *dir;
    int   track_no;
 } Track;
 
@@ -25,9 +28,12 @@ typedef struct _Track {
    artist → album
    ------------------------------ */
 typedef struct {
-   char *artist;
-   char *album;
+    char *artist;
+    char *album;
+    char *path;       // full directory path of the album
+    char *art_path;   // cover.jpg / folder.jpg / fallback
 } Album_Entry;
+
 
 /* ------------------------------
    Filter Modes
@@ -108,5 +114,6 @@ void scanner_start(Player_State *ps, const char *path);
 
 /* album art update */
 void ui_update_album_art(Player_State *ps, Track *t);
+
 
 #endif

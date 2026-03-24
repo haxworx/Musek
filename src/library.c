@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <Eina.h>
+#include <Ecore_File.h>
+#include <limits.h>
 
 static Eina_Lock _lib_lock;
 
@@ -47,6 +49,61 @@ _album_sort_cb(const void *d1, const void *d2)
 
     return strcasecmp(a->album, b->album);
 }
+
+/* ------------------------------
+   Detect album art in a folder
+   ------------------------------ */
+static void
+_album_detect_art(Album_Entry *ae)
+{
+    if (!ae || !ae->path) {
+        ae->art_path = strdup("data/noart.png");
+        printf("ALBUM ART DEBUG: artist='%s' album='%s' dir='(null)' art='%s'\n",
+               ae->artist, ae->album, ae->art_path);
+        return;
+    }
+
+    char cover[PATH_MAX];
+    char folder[PATH_MAX];
+
+    const char *cover_names[] = {
+        "cover.jpg", "cover.png", "Cover.jpg", "Cover.png",
+        NULL
+    };
+
+    const char *folder_names[] = {
+        "folder.jpg", "folder.png", "Folder.jpg", "Folder.png",
+        NULL
+    };
+
+    /* Try cover.* */
+    for (int i = 0; cover_names[i]; i++) {
+        snprintf(cover, sizeof(cover), "%s/%s", ae->path, cover_names[i]);
+        if (ecore_file_exists(cover)) {
+            ae->art_path = strdup(cover);
+            printf("ALBUM ART DEBUG: artist='%s' album='%s' dir='%s' art='%s'\n",
+                   ae->artist, ae->album, ae->path, ae->art_path);
+            return;
+        }
+    }
+
+    /* Try folder.* */
+    for (int i = 0; folder_names[i]; i++) {
+        snprintf(folder, sizeof(folder), "%s/%s", ae->path, folder_names[i]);
+        if (ecore_file_exists(folder)) {
+            ae->art_path = strdup(folder);
+            printf("ALBUM ART DEBUG: artist='%s' album='%s' dir='%s' art='%s'\n",
+                   ae->artist, ae->album, ae->path, ae->art_path);
+            return;
+        }
+    }
+
+    /* Fallback */
+    ae->art_path = strdup("data/noart.png");
+    printf("ALBUM ART DEBUG: artist='%s' album='%s' dir='%s' art='%s'\n",
+           ae->artist, ae->album, ae->path, ae->art_path);
+}
+
 
 /* ------------------------------
    Library Init
@@ -103,6 +160,9 @@ library_add_track(Library *lib, Track *t)
          Album_Entry *new_ae = calloc(1, sizeof(Album_Entry));
          new_ae->artist = _strdup0(t->artist);
          new_ae->album  = _strdup0(t->album);
+         new_ae->path   = _strdup0(t->dir);   /* directory of the track */
+
+         _album_detect_art(new_ae);
 
          lib->albums = eina_list_append(lib->albums, new_ae);
          lib->albums = eina_list_sort(lib->albums,
@@ -148,6 +208,7 @@ library_free(Library *lib)
          free(t->artist);
          free(t->album);
          free(t->path);
+         free(t->dir);
          free(t);
       }
 
@@ -170,6 +231,8 @@ library_free(Library *lib)
    EINA_LIST_FOREACH(lib->albums, l, ae) {
       free(ae->artist);
       free(ae->album);
+      free(ae->path);
+      free(ae->art_path);
       free(ae);
    }
    eina_list_free(lib->albums);

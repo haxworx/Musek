@@ -63,13 +63,29 @@ track_from_file(const char *path)
     t->title    = strdup(title && title[0] ? title : path);
     t->artist   = strdup(artist ? artist : "");
     t->album    = strdup(album ? album : "");
-    t->path     = strdup(path);
+
+    /* FIX: store directory, not full file path */
+    /* Store full file path */
+t->path = strdup(path);
+
+/* Store directory for album art */
+const char *slash = strrchr(path, '/');
+if (slash) {
+    size_t len = slash - path;
+    t->dir = strndup(path, len);
+} else {
+    t->dir = strdup("");
+}
+
+
+
     t->track_no = (int)track_no;
 
     taglib_tag_free_strings();
     taglib_file_free(tf);
     return t;
 }
+
 
 /* ------------------------------------------------------------
  * Main-loop callback: add track to library + refresh UI

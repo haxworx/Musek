@@ -53,28 +53,32 @@ populate_current_album_tracklist(Player_State *ps)
     ps->suppress_tracklist_callbacks = EINA_FALSE;
 }
 
-
-
 void
 ui_setup(Player_State *ps)
 {
-    /* initialize item classes */
     ui_populate_init();
 
     Evas_Object *win = ps->win;
-    evas_object_smart_callback_add(win, "delete,request", win_del_cb, NULL);
 
-    /* Right-click menu */
+    /* REAL minimum window size */
+    evas_object_size_hint_min_set(win, 800, 600);
+
+    evas_object_smart_callback_add(win, "delete,request", win_del_cb, NULL);
     evas_object_event_callback_add(win, EVAS_CALLBACK_MOUSE_DOWN, _right_click_cb, ps);
 
+    /* ---------------------------------------------------------
+       MAIN PANES (directly added to window)
+       --------------------------------------------------------- */
     Evas_Object *panes = elm_panes_add(win);
     elm_panes_horizontal_set(panes, EINA_FALSE);
     elm_panes_content_left_size_set(panes, 0.40);
     evas_object_size_hint_weight_set(panes, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    evas_object_size_hint_align_set(panes, EVAS_HINT_FILL, EVAS_HINT_FILL);
     evas_object_show(panes);
+
     elm_win_resize_object_add(win, panes);
 
-    /* left pane */
+    /* ---------------- LEFT PANE ---------------- */
     Evas_Object *left_box = elm_box_add(panes);
     elm_box_padding_set(left_box, 0, 5);
     evas_object_size_hint_weight_set(left_box, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
@@ -113,16 +117,15 @@ ui_setup(Player_State *ps)
     evas_object_smart_callback_add(btn_artists, "clicked", btn_artists_cb, ps);
     evas_object_smart_callback_add(btn_albums, "clicked", btn_albums_cb, ps);
     evas_object_smart_callback_add(btn_tracks, "clicked", btn_tracks_cb, ps);
-
     evas_object_smart_callback_add(genlist, "selected", genlist_selected_cb, ps);
 
-    /* right pane */
+    /* ---------------- RIGHT PANE ---------------- */
     Evas_Object *right = elm_box_add(panes);
     evas_object_size_hint_weight_set(right, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
     elm_box_padding_set(right, 0, 10);
     evas_object_show(right);
     elm_object_part_content_set(panes, "right", right);
-    
+
     Evas_Object *title = elm_label_add(right);
     elm_object_text_set(title, "<b>Artist Name - Track Title</b>");
     evas_object_size_hint_align_set(title, 0.5, 0.0);
@@ -177,7 +180,6 @@ ui_setup(Player_State *ps)
     evas_object_show(btn_next);
     elm_box_pack_end(controls, btn_next);
 
-    /* progress bar (full width) */
     Evas_Object *slider = elm_slider_add(right);
     elm_object_text_set(slider, "Progress");
     elm_slider_min_max_set(slider, 0.0, 1.0);
@@ -188,7 +190,6 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, slider);
     ps->slider = slider;
 
-    /* tracklist (full width) */
     Evas_Object *tracklist = elm_genlist_add(right);
     evas_object_size_hint_weight_set(tracklist, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
     evas_object_size_hint_align_set(tracklist, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -196,7 +197,6 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, tracklist);
     ps->album_tracklist = tracklist;
 
-    /* volume slider BELOW the tracklist */
     Evas_Object *vol_box = elm_box_add(right);
     elm_box_horizontal_set(vol_box, EINA_TRUE);
     evas_object_size_hint_weight_set(vol_box, EVAS_HINT_EXPAND, 0.0);
@@ -216,7 +216,6 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(vol_box, vol);
     ps->volume_slider = vol;
 
-    /* callbacks */
     evas_object_smart_callback_add(btn_play, "clicked", play_cb, ps);
     evas_object_smart_callback_add(btn_pause, "clicked", pause_cb, ps);
     evas_object_smart_callback_add(btn_prev, "clicked", btn_prev_cb, ps);

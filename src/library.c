@@ -1,6 +1,9 @@
 #include "player.h"
 #include <string.h>
 #include <stdlib.h>
+#include <Eina.h>
+
+static Eina_Lock _lib_lock;
 
 static char *
 _strdup0(const char *s)
@@ -32,6 +35,9 @@ library_new(void)
 {
    Library *lib = calloc(1, sizeof(Library));
    lib->album_tracks = eina_hash_string_superfast_new(NULL);
+
+   eina_lock_new(&_lib_lock);
+
    return lib;
 }
 
@@ -49,7 +55,9 @@ _list_contains_str(Eina_List *list, const char *str)
 void
 library_add_track(Library *lib, Track *t)
 {
-   if (!lib || !t) return;
+ if (!lib || !t) return;
+
+   eina_lock_take(&_lib_lock);
 
    if (t->artist && t->artist[0]) {
       if (!_list_contains_str(lib->artists, t->artist)) {
@@ -70,12 +78,16 @@ library_add_track(Library *lib, Track *t)
    tracks = eina_list_append(tracks, t);
    tracks = eina_list_sort(tracks, eina_list_count(tracks), _track_no_cmp);
    eina_hash_set(lib->album_tracks, album_key, tracks);
+
+   eina_lock_release(&_lib_lock);
 }
 
 void
 library_free(Library *lib)
 {
    if (!lib) return;
+
+    eina_lock_free(&_lib_lock);
 
    Eina_Iterator *it = eina_hash_iterator_data_new(lib->album_tracks);
    Eina_List *tracks_list;

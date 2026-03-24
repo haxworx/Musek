@@ -3,116 +3,193 @@
 #include <stdlib.h>
 #include <Eio.h>
 #include <Eina.h>
+#include <Ecore.h>
 
-typedef struct _Scan_Ctx {
-   Player_State *ps;
-} Scan_Ctx;
+/* Keep recursive Eio_File handles alive */
+static Eina_List *scan_jobs = NULL;
 
-static Track *
-track_from_file(const char *path)
+/* Serialize TagLib access */
+static Eina_Lock taglib_lock;
+
+/* ------------------------------------------------------------
+ * Worker job: passed to ecore_thread_run()
+ * ------------------------------------------------------------ */
+typedef struct _Worker_Job {
+    Player_State *ps;
+    char *path;
+} Worker_Job;
+
+typedef struct _Add_Job {
+    Player_State *ps;
+    Track        *t;
+} Add_Job;
+
+/* ------------------------------------------------------------
+ * Done / Error callbacks
+ * ------------------------------------------------------------ */
+static void
+scan_done_cb(void *data, Eio_File *handler)
 {
-   TagLib_File *tf = taglib_file_new(path);
-   if (!tf) return NULL;
-
-   TagLib_Tag *tag = taglib_file_tag(tf);
-   if (!tag) {
-      taglib_file_free(tf);
-      return NULL;
-   }
-
-   const char *title  = taglib_tag_title(tag);
-   const char *artist = taglib_tag_artist(tag);
-   const char *album  = taglib_tag_album(tag);
-   unsigned int track_no = taglib_tag_track(tag);
-
-   Track *t = calloc(1, sizeof(Track));
-   t->title    = strdup(title && title[0] ? title : path);
-   t->artist   = strdup(artist ? artist : "");
-   t->album    = strdup(album ? album : "");
-   t->path     = strdup(path);
-   t->track_no = (int)track_no;
-
-   taglib_tag_free_strings();
-   taglib_file_free(tf);
-   return t;
-}
-
-static Eina_Bool
-scan_filter_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
-{
-   /* Allow directories so recursion can happen */
-   if (info->type == EINA_FILE_DIR)
-      return EINA_TRUE;
-
-   if (info->type != EINA_FILE_REG)
-      return EINA_FALSE;
-
-   const char *path = info->path;
-   const char *ext = strrchr(path, '.');
-   if (!ext) return EINA_FALSE;
-   ext++;
-
-   if (!strcasecmp(ext, "mp3") ||
-       !strcasecmp(ext, "flac") ||
-       !strcasecmp(ext, "ogg") ||
-       !strcasecmp(ext, "wav") ||
-       !strcasecmp(ext, "m4a"))
-      return EINA_TRUE;
-
-   return EINA_FALSE;
+    scan_jobs = eina_list_remove(scan_jobs, handler);
 }
 
 static void
 scan_error_cb(void *data, Eio_File *handler, int error)
 {
-   /* Optional: log error */
+    scan_jobs = eina_list_remove(scan_jobs, handler);
 }
 
-static void
-scan_done_cb(void *data, Eio_File *handler)
+/* ------------------------------------------------------------
+ * Extract metadata from a file using TagLib
+ * ------------------------------------------------------------ */
+static Track *
+track_from_file(const char *path)
 {
-   (void)data;
-   (void)handler;
+    TagLib_File *tf = taglib_file_new(path);
+    if (!tf) return NULL;
+
+    TagLib_Tag *tag = taglib_file_tag(tf);
+    if (!tag) {
+        taglib_file_free(tf);
+        return NULL;
+    }
+
+    const char *title  = taglib_tag_title(tag);
+    const char *artist = taglib_tag_artist(tag);
+    const char *album  = taglib_tag_album(tag);
+    unsigned int track_no = taglib_tag_track(tag);
+
+    Track *t = calloc(1, sizeof(Track));
+    t->title    = strdup(title && title[0] ? title : path);
+    t->artist   = strdup(artist ? artist : "");
+    t->album    = strdup(album ? album : "");
+    t->path     = strdup(path);
+    t->track_no = (int)track_no;
+
+    taglib_tag_free_strings();
+    taglib_file_free(tf);
+    return t;
 }
 
+/* ------------------------------------------------------------
+ * Main-loop callback: add track to library + refresh UI
+ * ------------------------------------------------------------ */
+static void
+_library_add_cb(void *data)
+{
+    Add_Job *aj = data;
+
+    library_add_track(aj->ps->lib, aj->t);
+    ui_refresh_current(aj->ps);
+
+    free(aj);
+}
+
+/* ------------------------------------------------------------
+ * Worker thread: parse metadata, then hand off to main loop
+ * ------------------------------------------------------------ */
+static void
+_scan_worker(void *data, Ecore_Thread *thread)
+{
+    Worker_Job *job = data;
+
+    eina_lock_take(&taglib_lock);
+    Track *t = track_from_file(job->path);
+    eina_lock_release(&taglib_lock);
+
+    if (t) {
+        Add_Job *aj = calloc(1, sizeof(Add_Job));
+        aj->ps = job->ps;
+        aj->t  = t;
+
+        ecore_main_loop_thread_safe_call_async(_library_add_cb, aj);
+    }
+
+    free(job->path);
+    free(job);
+}
+
+/* ------------------------------------------------------------
+ * Eio filter: allow directories + audio files
+ * ------------------------------------------------------------ */
+static Eina_Bool
+scan_filter_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
+{
+    if (info->type == EINA_FILE_DIR)
+        return EINA_TRUE;
+
+    if (info->type != EINA_FILE_REG &&
+        info->type != EINA_FILE_UNKNOWN &&
+        info->type != EINA_FILE_LNK)
+        return EINA_FALSE;
+
+    const char *ext = strrchr(info->path, '.');
+    if (!ext)
+        return EINA_FALSE;
+
+    ext++;
+
+    if (!strcasecmp(ext, "mp3") ||
+        !strcasecmp(ext, "flac") ||
+        !strcasecmp(ext, "ogg") ||
+        !strcasecmp(ext, "wav") ||
+        !strcasecmp(ext, "m4a"))
+        return EINA_TRUE;
+
+    return EINA_FALSE;
+}
+
+/* ------------------------------------------------------------
+ * Eio main callback: called for each file or directory
+ * ------------------------------------------------------------ */
 static void
 scan_main_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
 {
-   /* Manual recursion because eio_file_direct_ls() is NOT recursive */
-   if (info->type == EINA_FILE_DIR) {
-      eio_file_direct_ls(
-         info->path,
-         scan_filter_cb,
-         scan_main_cb,
-         scan_done_cb,
-         scan_error_cb,
-         data
-      );
-      return;
-   }
+    if (info->type == EINA_FILE_DIR) {
 
-   Scan_Ctx *ctx = data;
-   Player_State *ps = ctx->ps;
+        Eio_File *sub = eio_file_direct_ls(
+            info->path,
+            scan_filter_cb,
+            scan_main_cb,
+            scan_done_cb,
+            scan_error_cb,
+            data
+        );
 
-   Track *t = track_from_file(info->path);
-   if (!t) return;
+        if (sub)
+            scan_jobs = eina_list_append(scan_jobs, sub);
 
-   library_add_track(ps->lib, t);
-   ui_refresh_current(ps);
+        return;
+    }
+
+    Worker_Job *job = calloc(1, sizeof(Worker_Job));
+    job->ps   = data;
+    job->path = strdup(info->path);
+
+    ecore_thread_run(_scan_worker, NULL, NULL, job);
 }
 
+/* ------------------------------------------------------------
+ * Start scanning
+ * ------------------------------------------------------------ */
 void
 scanner_start(Player_State *ps, const char *path)
 {
-   Scan_Ctx *ctx = calloc(1, sizeof(Scan_Ctx));
-   ctx->ps = ps;
+    static Eina_Bool lock_inited = EINA_FALSE;
+    if (!lock_inited) {
+        eina_lock_new(&taglib_lock);
+        lock_inited = EINA_TRUE;
+    }
 
-   eio_file_direct_ls(
-      path,
-      scan_filter_cb,
-      scan_main_cb,
-      scan_done_cb,
-      scan_error_cb,
-      ctx
-   );
+    Eio_File *f = eio_file_direct_ls(
+        path,
+        scan_filter_cb,
+        scan_main_cb,
+        scan_done_cb,
+        scan_error_cb,
+        ps
+    );
+
+    if (f)
+        scan_jobs = eina_list_append(scan_jobs, f);
 }

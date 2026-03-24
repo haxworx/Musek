@@ -106,3 +106,10 @@ playback_album_start(Player_State *ps, const char *album)
    Track *t = eina_list_nth(tracks, 0);
    if (t) playback_track_start(ps, t);
 }
+
+void
+playback_set_volume(Player_State *ps, double vol)
+{
+    if (!ps || !ps->emotion) return;
+    emotion_object_audio_volume_set(ps->emotion, vol);
+}

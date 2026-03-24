@@ -126,3 +126,10 @@ void btn_prev_cb(void *data, Evas_Object *obj, void *event_info)
 
     populate_current_album_tracklist(ps);
 }
+void
+volume_changed_cb(void *data, Evas_Object *obj, void *event_info)
+{
+    Player_State *ps = data;
+    double vol = elm_slider_value_get(obj);
+    playback_set_volume(ps, vol);
+}

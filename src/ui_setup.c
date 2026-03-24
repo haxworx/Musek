@@ -118,28 +118,18 @@ ui_setup(Player_State *ps)
     Evas_Object *title = elm_label_add(right);
     elm_object_text_set(title, "<b>Artist Name - Track Title</b>");
     evas_object_size_hint_align_set(title, 0.5, 0.0);
-    
     evas_object_size_hint_padding_set(title, 0, 0, 10, 0);
-
     evas_object_show(title);
     elm_box_pack_end(right, title);
     ps->title_label = title;
 
     Evas_Object *album_art = elm_image_add(right);
-    // Preserve aspect ratio
     elm_image_aspect_fixed_set(album_art, EINA_TRUE);
-    
-    // Allow scaling but keep proportions
     elm_image_resizable_set(album_art, EINA_TRUE, EINA_TRUE);
-    // Optional: if you want the image to fill the box without borders
-    // elm_image_fill_outside_set(album_art, EINA_TRUE);
-    // Give it some space
     evas_object_size_hint_min_set(album_art, 250, 250);
     evas_object_size_hint_weight_set(album_art, EVAS_HINT_EXPAND, 0.0);
     evas_object_size_hint_align_set(album_art, EVAS_HINT_FILL, 0.0);
-
     evas_object_size_hint_padding_set(album_art, 0, 0, 5, 0);
-
     evas_object_show(album_art);
     elm_box_pack_end(right, album_art);
     ps->album_art = album_art;
@@ -179,6 +169,7 @@ ui_setup(Player_State *ps)
     evas_object_show(btn_next);
     elm_box_pack_end(controls, btn_next);
 
+    /* progress bar (full width) */
     Evas_Object *slider = elm_slider_add(right);
     elm_object_text_set(slider, "Progress");
     elm_slider_min_max_set(slider, 0.0, 1.0);
@@ -189,7 +180,7 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, slider);
     ps->slider = slider;
 
-    /* tracklist under progress bar */
+    /* tracklist (full width) */
     Evas_Object *tracklist = elm_genlist_add(right);
     evas_object_size_hint_weight_set(tracklist, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
     evas_object_size_hint_align_set(tracklist, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -197,13 +188,33 @@ ui_setup(Player_State *ps)
     elm_box_pack_end(right, tracklist);
     ps->album_tracklist = tracklist;
 
-    elm_genlist_clear(tracklist);
+    /* volume slider BELOW the tracklist */
+    Evas_Object *vol_box = elm_box_add(right);
+    elm_box_horizontal_set(vol_box, EINA_TRUE);
+    evas_object_size_hint_weight_set(vol_box, EVAS_HINT_EXPAND, 0.0);
+    evas_object_size_hint_align_set(vol_box, 1.0, 0.0);
+    evas_object_show(vol_box);
+    elm_box_pack_end(right, vol_box);
 
+    Evas_Object *vol = elm_slider_add(vol_box);
+    elm_slider_horizontal_set(vol, EINA_TRUE);
+    elm_slider_min_max_set(vol, 0.0, 1.0);
+    elm_slider_value_set(vol, 1.0);
+    elm_object_text_set(vol, "Vol.");
+    evas_object_size_hint_weight_set(vol, 0.0, 0.0);
+    evas_object_size_hint_align_set(vol, 1.0, 0.5);
+    evas_object_size_hint_min_set(vol, 120, 1);
+    evas_object_show(vol);
+    elm_box_pack_end(vol_box, vol);
+    ps->volume_slider = vol;
+
+    /* callbacks */
     evas_object_smart_callback_add(btn_play, "clicked", play_cb, ps);
     evas_object_smart_callback_add(btn_pause, "clicked", pause_cb, ps);
     evas_object_smart_callback_add(btn_prev, "clicked", btn_prev_cb, ps);
     evas_object_smart_callback_add(btn_next, "clicked", btn_next_cb, ps);
     evas_object_smart_callback_add(slider, "changed", slider_changed_cb, ps);
+    evas_object_smart_callback_add(vol, "changed", volume_changed_cb, ps);
 
     playback_init(ps);
 

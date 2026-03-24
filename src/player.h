@@ -42,6 +42,7 @@ typedef struct _Player_State {
    Evas_Object *album_art;
    Evas_Object *genlist;
    Evas_Object *album_tracklist;
+   Evas_Object *volume_slider;
 
    Library     *lib;
    Filter_Mode  filter;
@@ -67,6 +68,7 @@ void playback_pause(Player_State *ps);
 void playback_seek(Player_State *ps, double rel);
 void playback_track_start(Player_State *ps, Track *t);
 void playback_album_start(Player_State *ps, const char *album);
+void playback_set_volume(Player_State *ps, double vol);
 
 /* ui.c */
 void ui_setup(Player_State *ps);

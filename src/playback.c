@@ -69,10 +69,13 @@ static void
 update_title(Player_State *ps, Track *t)
 {
    char buf[512];
-   snprintf(buf, sizeof(buf), "<b>%s</b><br/>%s",
-            t->title,
-            (t->artist && t->artist[0]) ? t->artist : "");
-   elm_object_text_set(ps->title_label, buf);
+   snprintf(buf, sizeof(buf),
+   "<b>%s - %s</b>",
+   (t->artist && t->artist[0]) ? t->artist : "Unknown Artist",
+   (t->album  && t->album[0])  ? t->album  : "Unknown Album");
+
+    elm_object_text_set(ps->title_label, buf);
+
 }
 
 void

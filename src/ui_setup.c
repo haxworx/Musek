@@ -114,6 +114,16 @@ ui_setup(Player_State *ps)
     elm_box_padding_set(right, 0, 10);
     evas_object_show(right);
     elm_object_part_content_set(panes, "right", right);
+    
+    Evas_Object *title = elm_label_add(right);
+    elm_object_text_set(title, "<b>Artist Name - Track Title</b>");
+    evas_object_size_hint_align_set(title, 0.5, 0.0);
+    
+    evas_object_size_hint_padding_set(title, 0, 0, 10, 0);
+
+    evas_object_show(title);
+    elm_box_pack_end(right, title);
+    ps->title_label = title;
 
     Evas_Object *album_art = elm_image_add(right);
     // Preserve aspect ratio
@@ -128,18 +138,11 @@ ui_setup(Player_State *ps)
     evas_object_size_hint_weight_set(album_art, EVAS_HINT_EXPAND, 0.0);
     evas_object_size_hint_align_set(album_art, EVAS_HINT_FILL, 0.0);
 
-    evas_object_size_hint_padding_set(album_art, 0, 0, 15, 0);
+    evas_object_size_hint_padding_set(album_art, 0, 0, 5, 0);
 
     evas_object_show(album_art);
     elm_box_pack_end(right, album_art);
     ps->album_art = album_art;
-
-    Evas_Object *title = elm_label_add(right);
-    elm_object_text_set(title, "<b>Track Title</b><br/>Artist Name");
-    evas_object_size_hint_align_set(title, 0.5, 0.0);
-    evas_object_show(title);
-    elm_box_pack_end(right, title);
-    ps->title_label = title;
 
     Evas_Object *emotion = emotion_object_add(evas_object_evas_get(win));
     emotion_object_init(emotion, NULL);

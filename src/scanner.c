@@ -143,17 +143,29 @@ scan_filter_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
     if (!ext)
         return EINA_FALSE;
 
-    ext++;
+    ext++;  // skip the dot
 
-    if (!strcasecmp(ext, "mp3") ||
+    /* Supported audio formats */
+    if (!strcasecmp(ext, "mp3")  ||
         !strcasecmp(ext, "flac") ||
-        !strcasecmp(ext, "ogg") ||
-        !strcasecmp(ext, "wav") ||
-        !strcasecmp(ext, "m4a"))
+        !strcasecmp(ext, "ogg")  ||
+        !strcasecmp(ext, "wav")  ||
+        !strcasecmp(ext, "m4a")  ||
+        !strcasecmp(ext, "aac")  ||
+        !strcasecmp(ext, "opus") ||
+        !strcasecmp(ext, "aiff") ||
+        !strcasecmp(ext, "aif")  ||
+        !strcasecmp(ext, "wma")  ||
+        !strcasecmp(ext, "alac") ||
+        !strcasecmp(ext, "mp2")  ||
+        !strcasecmp(ext, "mp1"))
+    {
         return EINA_TRUE;
+    }
 
     return EINA_FALSE;
 }
+
 
 /* ------------------------------------------------------------
  * Eio main callback: called for each file or directory

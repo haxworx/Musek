@@ -22,14 +22,15 @@ typedef struct _Item_Data {
     Item_Type type;
     Player_State *ps;
 
-    const char *album;   /* album name for TRACK items */
+    const char *album;   /* album name for TRACK items (stringshare) */
 
     union {
-        const char     *name;        /* Artist name */
-        Track          *track;       /* Track */
-        Album_Entry    *album_entry; /* Album entry for ALBUM items */
+        const char     *name;        /* Artist name (stringshare) */
+        Track          *track;       /* Track (already using stringshare) */
+        Album_Entry    *album_entry; /* Album entry (will use stringshare) */
     } u;
 } Item_Data;
+
 
 /* ------------------------------
    GENLIST Item Classes

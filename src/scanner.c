@@ -1,3 +1,4 @@
+#include "eina_stringshare.h"
 #include "player.h"
 #include <string.h>
 #include <stdlib.h>
@@ -60,24 +61,24 @@ track_from_file(const char *path)
     unsigned int track_no = taglib_tag_track(tag);
 
     Track *t = calloc(1, sizeof(Track));
-    t->title    = strdup(title && title[0] ? title : path);
-    t->artist   = strdup(artist ? artist : "");
-    t->album    = strdup(album ? album : "");
+    t->title  = eina_stringshare_add(title && title[0] ? title : path);
+    t->artist = eina_stringshare_add(artist ? artist : "");
+    t->album  = eina_stringshare_add(album ? album : "");
+    t->path   = eina_stringshare_add(path);
 
-    /* FIX: store directory, not full file path */
-    /* Store full file path */
-t->path = strdup(path);
+    /* Correct directory extraction */
+    const char *slash = strrchr(path, '/');
+    if (slash) {
+        size_t len = slash - path;
+        char *tmp = malloc(len + 1);
+        memcpy(tmp, path, len);
+        tmp[len] = '\0';
 
-/* Store directory for album art */
-const char *slash = strrchr(path, '/');
-if (slash) {
-    size_t len = slash - path;
-    t->dir = strndup(path, len);
-} else {
-    t->dir = strdup("");
-}
-
-
+        t->dir = eina_stringshare_add(tmp);
+        free(tmp);
+    } else {
+        t->dir = eina_stringshare_add("");
+    }
 
     t->track_no = (int)track_no;
 
@@ -85,6 +86,7 @@ if (slash) {
     taglib_file_free(tf);
     return t;
 }
+
 
 
 /* ------------------------------------------------------------

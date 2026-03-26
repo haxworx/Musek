@@ -1,3 +1,4 @@
+#include "eina_stringshare.h"
 #include "player.h"
 #include <string.h>
 #include <stdlib.h>
@@ -57,7 +58,7 @@ static void
 _album_detect_art(Album_Entry *ae)
 {
     if (!ae || !ae->path) {
-        ae->art_path = strdup("data/noart.png");
+        ae->art_path = eina_stringshare_add("data/noart.png");
         
         return;
     }
@@ -79,7 +80,7 @@ _album_detect_art(Album_Entry *ae)
     for (int i = 0; cover_names[i]; i++) {
         snprintf(cover, sizeof(cover), "%s/%s", ae->path, cover_names[i]);
         if (ecore_file_exists(cover)) {
-            ae->art_path = strdup(cover);
+            ae->art_path = eina_stringshare_add(cover);
             
             return;
         }
@@ -89,7 +90,7 @@ _album_detect_art(Album_Entry *ae)
     for (int i = 0; folder_names[i]; i++) {
         snprintf(folder, sizeof(folder), "%s/%s", ae->path, folder_names[i]);
         if (ecore_file_exists(folder)) {
-            ae->art_path = strdup(folder);
+            ae->art_path = eina_stringshare_add(folder);
             
             return;
         }
@@ -154,9 +155,9 @@ library_add_track(Library *lib, Track *t)
       /* Add album only if not already present */
       if (!exists) {
          Album_Entry *new_ae = calloc(1, sizeof(Album_Entry));
-         new_ae->artist = _strdup0(t->artist);
-         new_ae->album  = _strdup0(t->album);
-         new_ae->path   = _strdup0(t->dir);   /* directory of the track */
+         new_ae->artist = eina_stringshare_add(t->artist);
+         new_ae->album  = eina_stringshare_add(t->album);
+         new_ae->path   = eina_stringshare_add(t->dir);   /* directory of the track */
 
          _album_detect_art(new_ae);
 
@@ -200,11 +201,11 @@ library_free(Library *lib)
       Eina_List *l;
 
       EINA_LIST_FOREACH(tracks_list, l, t) {
-         free(t->title);
-         free(t->artist);
-         free(t->album);
-         free(t->path);
-         free(t->dir);
+         eina_stringshare_del(t->title);
+         eina_stringshare_del(t->artist);
+         eina_stringshare_del(t->album);
+         eina_stringshare_del(t->path);
+         eina_stringshare_del(t->dir);
          free(t);
       }
 
@@ -225,10 +226,10 @@ library_free(Library *lib)
    /* Free albums (Album_Entry structs) */
    Album_Entry *ae;
    EINA_LIST_FOREACH(lib->albums, l, ae) {
-      free(ae->artist);
-      free(ae->album);
-      free(ae->path);
-      free(ae->art_path);
+      eina_stringshare_del(ae->artist);
+      eina_stringshare_del(ae->album);
+      eina_stringshare_del(ae->path);
+      eina_stringshare_del(ae->art_path);
       free(ae);
    }
    eina_list_free(lib->albums);

@@ -14,24 +14,20 @@
    Track Structure
    ------------------------------ */
 typedef struct _Track {
-   char *title;
-   char *artist;
-   char *album;
-   char *path;
-   char *dir;
-   int   track_no;
+    const char *title;   /* eina_stringshare */
+    const char *artist;  /* eina_stringshare */
+    const char *album;   /* eina_stringshare */
+    const char *path;    /* eina_stringshare */
+    const char *dir;     /* eina_stringshare */
+    int   track_no;
 } Track;
 
-/* ------------------------------
-   Album Entry (NEW)
-   Used for hierarchical sorting:
-   artist → album
-   ------------------------------ */
+
 typedef struct {
-    char *artist;
-    char *album;
-    char *path;       // full directory path of the album
-    char *art_path;   // cover.jpg / folder.jpg / fallback
+    const char *artist;    /* eina_stringshare */
+    const char *album;     /* eina_stringshare */
+    const char *path;      /* eina_stringshare */
+    const char *art_path;  /* eina_stringshare */
 } Album_Entry;
 
 

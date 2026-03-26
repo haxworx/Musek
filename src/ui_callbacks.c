@@ -179,10 +179,6 @@ btn_albums_cb(void *data, Evas_Object *obj, void *event_info)
 
     /* Clear any artist filter so Albums shows ALL albums */
     ps->current_artist = NULL;
-    ps->album_mode = EINA_FALSE;
-    ps->current_album = NULL;
-    ps->current_album_tracks = NULL;
-    ps->current_index = 0;
 
     ps->filter = FILTER_ALBUMS;
     ui_refresh_current(ps);

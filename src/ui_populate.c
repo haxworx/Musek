@@ -345,10 +345,7 @@ void
 populate_tracks(Player_State *ps)
 {
     /* Leave album mode when entering Tracks view */
-    ps->album_mode = EINA_FALSE;
-    ps->current_album = NULL;
-    ps->current_album_tracks = NULL;
-
+  
     elm_genlist_clear(ps->genlist);
 
     Album_Entry *ae;

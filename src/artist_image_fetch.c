@@ -470,9 +470,9 @@ artist_image_fetch(const char *artist,
     Eina_Bool had = EINA_FALSE;
     had = _search_append(sb, artist, had);
     had = _search_append(sb, "musician", had);
-    had = _search_append(sb, "portrait", had);
-    had = _search_append(sb, "photo", had);
-    had = _search_append(sb, "face", had);
+    had = _search_append(sb, "image", had);
+    had = _search_append(sb, "picture", had);
+    had = _search_append(sb, "last.fm", had);
 
     eina_strbuf_append(sb, Q_END);
 

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Musek
+Comment=Music player
+Exec=musek
+Icon=musek
+Type=Application
+Categories=AudioVideo;Audio;Player;

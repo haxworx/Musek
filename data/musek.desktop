@@ -1,7 +1,9 @@
 [Desktop Entry]
+Encoding=UTF-8
+Type=Application
 Name=Musek
 Comment=Music player
 Exec=musek
 Icon=musek
-Type=Application
-Categories=AudioVideo;Audio;Player;
+Categories=AudioVideo;Player;
+StartupWMClass=musek

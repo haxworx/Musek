@@ -261,7 +261,7 @@ ui_setup(Player_State *ps)
 
     /* Left label: "time" */
     ps->lbl_time_text = elm_label_add(hbox);
-    elm_object_text_set(ps->lbl_time_text, "Time");
+    elm_object_text_set(ps->lbl_time_text, "0:00");
     evas_object_show(ps->lbl_time_text);
     elm_box_pack_end(hbox, ps->lbl_time_text);
 

@@ -18,7 +18,13 @@ srcs = [
   'ui_settings.c',
   'ui_albumart.c',
   'artist_image_fetch.c',
-  'sha1.c' 
+  'sha1.c'
 ]
 
-executable('musek', srcs, dependencies: deps)
+executable(
+  'musek',
+  srcs,
+  dependencies: deps,
+  install: true,
+  install_dir: get_option('bindir')
+)

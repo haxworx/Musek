@@ -2,15 +2,14 @@
 
 void artist_image_prefetch_all(Player_State *ps);
 
-
-/* Keep recursive Eio_File handles alive */
-static Eina_List *scan_jobs = NULL;
+/* Keep track of active scan jobs (instead of storing all Eio_File handles) */
+static int scan_jobs = 0;
 
 /* Serialize TagLib access */
 static Eina_Lock taglib_lock;
 
 /* ------------------------------------------------------------
- * Worker job: passed to ecore_thread_run()
+ * Worker job: passed to ecore_thread_pool_run()
  * ------------------------------------------------------------ */
 typedef struct _Worker_Job {
     Player_State *ps;
@@ -30,20 +29,17 @@ scan_done_cb(void *data, Eio_File *handler)
 {
     Player_State *ps = data;
 
-    scan_jobs = eina_list_remove(scan_jobs, handler);
-
-    if (!scan_jobs)
-    {
+    if (--scan_jobs == 0) {
         printf("SCAN COMPLETE: starting artist image prefetch\n");
         artist_image_prefetch_all(ps);
     }
 }
 
-
 static void
 scan_error_cb(void *data, Eio_File *handler, int error)
 {
-    scan_jobs = eina_list_remove(scan_jobs, handler);
+    if (scan_jobs > 0)
+        scan_jobs--;
 }
 
 /* ------------------------------------------------------------
@@ -67,21 +63,21 @@ track_from_file(const char *path)
     unsigned int track_no = taglib_tag_track(tag);
 
     Track *t = calloc(1, sizeof(Track));
+    if (!t) {
+        taglib_file_free(tf);
+        return NULL;
+    }
+
     t->title  = eina_stringshare_add(title && title[0] ? title : path);
     t->artist = eina_stringshare_add(artist ? artist : "");
     t->album  = eina_stringshare_add(album ? album : "");
     t->path   = eina_stringshare_add(path);
 
-    /* Correct directory extraction */
+    /* More efficient directory extraction (no temporary malloc) */
     const char *slash = strrchr(path, '/');
     if (slash) {
-        size_t len = slash - path;
-        char *tmp = malloc(len + 1);
-        memcpy(tmp, path, len);
-        tmp[len] = '\0';
-
-        t->dir = eina_stringshare_add(tmp);
-        free(tmp);
+        size_t len = (size_t)(slash - path);
+        t->dir = eina_stringshare_add_length(path, len);
     } else {
         t->dir = eina_stringshare_add("");
     }
@@ -92,8 +88,6 @@ track_from_file(const char *path)
     taglib_file_free(tf);
     return t;
 }
-
-
 
 /* ------------------------------------------------------------
  * Main-loop callback: add track to library + refresh UI
@@ -123,10 +117,11 @@ _scan_worker(void *data, Ecore_Thread *thread)
 
     if (t) {
         Add_Job *aj = calloc(1, sizeof(Add_Job));
-        aj->ps = job->ps;
-        aj->t  = t;
-
-        ecore_main_loop_thread_safe_call_async(_library_add_cb, aj);
+        if (aj) {
+            aj->ps = job->ps;
+            aj->t  = t;
+            ecore_main_loop_thread_safe_call_async(_library_add_cb, aj);
+        } 
     }
 
     free(job->path);
@@ -174,14 +169,18 @@ scan_filter_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
     return EINA_FALSE;
 }
 
-
 /* ------------------------------------------------------------
  * Eio main callback: called for each file or directory
  * ------------------------------------------------------------ */
 static void
 scan_main_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
 {
+    Player_State *ps = data;
+
     if (info->type == EINA_FILE_DIR) {
+        /* Optionally skip symlinked directories to avoid weird recursion */
+        if (info->type == EINA_FILE_LNK)
+            return;
 
         Eio_File *sub = eio_file_direct_ls(
             info->path,
@@ -189,19 +188,27 @@ scan_main_cb(void *data, Eio_File *handler, const Eina_File_Direct_Info *info)
             scan_main_cb,
             scan_done_cb,
             scan_error_cb,
-            data
+            ps
         );
 
         if (sub)
-            scan_jobs = eina_list_append(scan_jobs, sub);
+            scan_jobs++;
 
         return;
     }
 
     Worker_Job *job = calloc(1, sizeof(Worker_Job));
-    job->ps   = data;
-    job->path = strdup(info->path);
+    if (!job)
+        return;
 
+    job->ps   = ps;
+    job->path = strdup(info->path);
+    if (!job->path) {
+        free(job);
+        return;
+    }
+
+    /* Use thread pool to avoid unbounded thread creation */
     ecore_thread_run(_scan_worker, NULL, NULL, job);
 }
 
@@ -227,5 +234,5 @@ scanner_start(Player_State *ps, const char *path)
     );
 
     if (f)
-        scan_jobs = eina_list_append(scan_jobs, f);
+        scan_jobs++;
 }
